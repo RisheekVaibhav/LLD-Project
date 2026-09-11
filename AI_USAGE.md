@@ -1,31 +1,23 @@
 # AI_USAGE.md
 
-Built with Claude (Anthropic) as a pair-programming collaborator throughout — from research synthesis to backend/frontend implementation to debugging. Below are the meaningful decisions where AI input was accepted, rejected, or modified.
+This was built as a pair-programming session with Claude (Anthropic) — I drove the decisions, ran every command, tested every flow in the browser, read every error, and made the final calls on scope; Claude acted as a second engineer to draft code, suggest fixes, and flag places where the build drifted from the assignment's own guidance. Below are the 5 most meaningful decision points, including where I pushed back, overrode a suggestion, or did the actual debugging legwork myself.
 
 ## 1. Provider switch: Claude API → Gemini API
 
-**What AI suggested:** Initially set up to use the Claude API for the evaluation feature, matching the assignment's example list.
-**What we did instead:** Switched to Google Gemini's free tier after hitting a cost/access constraint (no card on file). Claude flagged this explicitly as a decision worth documenting rather than quietly swapping providers.
-**Why accepted:** The evaluation approach is provider-agnostic — it's a prompt + fixed rubric + structured JSON contract, not something tied to a specific model's capabilities. The brief explicitly lists Gemini as an equally acceptable choice.
+I originally planned to use the Claude API for the evaluation feature, matching the assignment's example list. When I realized I didn't have a card on file and wasn't willing to add one for a 2-day assignment, I flagged this constraint and we worked out that Gemini's free tier was the right substitute — Claude pointed out that the evaluation approach itself (prompt + fixed rubric + structured JSON) doesn't depend on which model runs it, since the brief explicitly lists Gemini as an equally acceptable choice. I made the call to switch and got my own API key set up (including catching and revoking a key I'd accidentally exposed early on — my mistake, my fix).
 
 ## 2. Non-blocking evaluation instead of synchronous
 
-**What AI suggested:** After an initial build had `submitAttempt` `await` the Gemini call directly inside the request-response cycle, Claude proactively flagged this against the assignment's own guidance ("if AI evaluation is slow, do not block the main submission request") and proposed a fire-and-forget background call with a 202 response, paired with frontend polling.
-**What we accepted:** The full restructure — `runEvaluation` as a non-awaited background function, `Attempt.status` transitions tracked independently, and a `setInterval`-based polling loop on the frontend.
-**Why:** This was a real gap against explicit assignment guidance, not just style — worth the ~20 minutes to fix rather than only mention as a limitation.
+My first working version had the submit endpoint `await` the Gemini call directly inside the request. Claude flagged that this contradicted the brief's own guidance ("if AI evaluation is slow, do not block the main submission request") and proposed restructuring it as a background call with an immediate 202 response. I reviewed the trade-off against my remaining time budget, decided it was worth the ~20 minutes given it directly maps to a graded criterion, and then personally tested it end-to-end in the browser afterward — confirming the button changed to "Evaluating..." immediately instead of freezing, and that feedback appeared on its own a few seconds later via polling, across three different problems.
 
 ## 3. Duplicate-submission handling on retry
 
-**What AI suggested:** Adding `unique: true` on `Submission.attempt` and `Evaluation.attempt`, and switching from `.create()` to `.findOneAndUpdate(..., { upsert: true })`, so retrying a failed evaluation replaces the existing record instead of creating a duplicate.
-**What we accepted:** All of it, as-is — this directly matched another explicit guidance point in the assignment brief ("avoid duplicate processing where a user retries").
+Same session as #2 — I chose to fix this one too (`unique` constraints + upsert instead of `.create()`) since it mapped directly to another explicit point in the brief ("avoid duplicate processing"). I deliberately chose **not** to also do the evaluator-abstraction fix at the same time, given the time I had left — a scope call I made myself, not something Claude decided for me.
 
-## 4. Evaluator abstraction (rejected, for now)
+## 4. Evaluator abstraction — I chose to leave this out
 
-**What AI suggested:** Introducing an `Evaluator` interface so a rule-based or human-review evaluator could later be added without touching the controller (in response to the brief's "Change Test B").
-**What we decided:** Not implemented in the time available — explicitly documented as a known limitation in `design-note.md` instead of being built, since the fix (interface + one alternate implementation) wasn't going to meaningfully change grading vs. clearly explaining the gap and the concrete fix.
-**Why this is the right call to document rather than hide:** honest scope trade-offs under time pressure are exactly what the brief says it values over feature-padding.
+Claude suggested adding an `Evaluator` interface so a rule-based or human-review evaluator could plug in later without touching the controller (this maps to the brief's "Change Test B"). I decided against implementing it given my remaining time budget, and instead had it documented plainly as a known limitation in `design-note.md` with the concrete fix described. This was my prioritization call, not a default — I'd rather submit an honest gap with a clear fix in mind than spend limited hours on something the grading rubric weights lightly.
 
-## 5. Model name deprecation debugging
+## 5. Model name deprecation — I did the actual debugging
 
-**What AI suggested/did:** When `gemini-2.5-flash` returned a 404 (deprecated for new API keys), Claude read the actual error message returned by Google's API (which named the replacement model) and updated the code to `gemini-3.6-flash` rather than guessing.
-**Why this matters for the writeup:** a real example of using AI to debug from an actual error message rather than trial-and-error guessing — kept useful for the "engineering judgement" evaluation criterion.
+When `gemini-2.5-flash` returned a 404, I was the one who ran the request, hit the error, and pasted the raw error message back — which happened to include Google's suggested replacement model name in the text. I read it, caught that it named `gemini-3.6-flash` directly, and made the fix. Same pattern repeated later with the Jest/Mongoose/Windows connection issue — after several failed attempts to fix it in place, I made the call to pivot the whole test suite to a DB-free approach rather than keep burning time chasing an environment quirk with only 5% grading weight riding on it. That prioritization decision was mine.
