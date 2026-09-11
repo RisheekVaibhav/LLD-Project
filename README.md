@@ -48,7 +48,7 @@ Open `http://localhost:5173`.
 | GET | `/api/problems` | List all problems |
 | GET | `/api/problems/:slug` | Get one problem's detail |
 | POST | `/api/attempts` | Start a new attempt (`{ learnerId, problemSlug }`) |
-| POST | `/api/attempts/:id/submit` | Submit a design (`{ content }`) — returns 202, evaluation runs in background |
+| POST | `/api/attempts/:id/submit` | Submit a design (`{ content }`); returns 202, evaluation runs in background |
 | GET | `/api/attempts/:id` | Get one attempt with its submission + evaluation (used for polling) |
 | GET | `/api/attempts/history?learnerId=X` | Get all attempts for a learner |
 
@@ -56,7 +56,7 @@ Open `http://localhost:5173`.
 
 1. Pick a problem from the list
 2. Read requirements, write a text design describing classes, responsibilities, and reasoning
-3. Submit — status moves `InProgress → Evaluating`
+3. Submit; status moves `InProgress → Evaluating`
 4. Frontend polls every 2s until evaluation completes; feedback shown with per-criterion scores, evidence, concerns, and suggestions
 5. View past attempts under History
 
@@ -70,7 +70,7 @@ See `design-note.md` for the full domain model, evaluation approach, and trade-o
 
 ## Known Limitations
 
-- No authentication — `learnerId` is a hardcoded string for this MVP
-- Evaluator (Gemini) is called directly from the controller, not behind an interface — a known extensibility gap, discussed in `design-note.md`
+- No authentication, `learnerId` is a hardcoded string for this MVP
+- Evaluator (Gemini) is called directly from the controller, not behind an interface. This is a known extensibility gap, discussed in `design-note.md`
 - No duplicate-mapping-style constraints beyond Submission/Evaluation uniqueness per attempt
-- Manual + targeted automated testing, not full coverage — see `tests/`
+- Manual + targeted automated testing, not full coverage; see `tests/`
